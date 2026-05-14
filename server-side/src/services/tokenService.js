@@ -17,7 +17,18 @@ const generateRefreshToken = (user) => {
   );
 };
 
+const generateAuthPayload = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  avatarUrl: user.avatarUrl,
+  isOnline: user.isOnline,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt
+});
+
 module.exports = {
   generateAccessToken,
-  generateRefreshToken
+  generateRefreshToken,
+  generateAuthPayload
 };

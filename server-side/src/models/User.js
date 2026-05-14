@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
     unique: true
   },
   password: String,
+  avatarUrl: String,
   refreshToken: String,
   isOnline: {
     type: Boolean,

@@ -1,24 +1,37 @@
 
 import './App.css';
 import ChatArea from './Components/ChatArea';
-import CreateGroups from './Components/CreateGroups';
 import Login from './Components/Login';
 import MainContainer from './Components/MainContainer';
+import Profile from './Components/Profile';
 import Welcome from './Components/Welcome';
 import Users from './Components/Users';
 import Groups from './Components/Groups';
-import {Routes, Route} from 'react-router-dom';
+import CreateGroups from './Components/CreateGroups';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { getAuthToken } from './utils/authToken';
+
 function App() {
+  const isLoggedIn = !!getAuthToken();
+
   return (
     <div className="App">
       <Routes>
-        <Route path="/" element= {<Login/>}/>
-        <Route path="app" element= {<MainContainer/>}>
-          <Route path="welcome" element= {<Welcome/>}></Route>
-          <Route path="chat" element= {<ChatArea/>}></Route>
-          <Route path="users" element= {<Users/>}></Route>
-          <Route path="groups" element= {<Groups/>}></Route>
-          <Route path="create-groups" element= {<CreateGroups/>}></Route>
+        <Route
+          path="/"
+          element={isLoggedIn ? <Navigate to="/app/welcome" replace /> : <Login />}
+        />
+        <Route
+          path="app"
+          element={isLoggedIn ? <MainContainer /> : <Navigate to="/" replace />}
+        >
+          <Route index element={<Navigate to="welcome" replace />} />
+          <Route path="welcome" element={<Welcome />} />
+          <Route path="chat/:chatId" element={<ChatArea />} />
+          <Route path="users" element={<Users />} />
+          <Route path="groups" element={<Groups />} />
+          <Route path="create-groups" element={<CreateGroups />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
     </div>

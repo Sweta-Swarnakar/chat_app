@@ -6,11 +6,19 @@ const sendMessage = async (req, res) => {
 
     const { chatId, text } = req.body;
 
+    if (!chatId || !text || !text.trim()) {
+      return res.status(400).json({
+        message: "chatId and text are required"
+      });
+    }
+
     const message = await Message.create({
       sender: req.user.id,
       chatId,
       text
     });
+
+    await message.populate("sender", "name email");
 
     res.status(201).json(message);
 
@@ -24,7 +32,9 @@ const getMessages = async (req, res) => {
 
     const messages = await Message.find({
       chatId: req.params.chatId
-    }).sort({ createdAt: 1 });
+    })
+      .populate("sender", "name email")
+      .sort({ createdAt: 1 });
 
     res.json(messages);
 

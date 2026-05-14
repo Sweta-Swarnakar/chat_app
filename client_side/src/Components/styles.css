@@ -68,6 +68,7 @@
     margin: 5px;
     border-radius: 20px;
     transition: 0.5s;
+    cursor: pointer;
 }
 
 .conversation-container:hover {
@@ -94,6 +95,24 @@
     border-radius: 50%;
     justify-self: center;
     align-self: center;
+    object-fit: cover;
+}
+
+.avatar-image {
+    object-fit: cover;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+}
+
+.list-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
 }
 
 .con-title {
@@ -231,13 +250,52 @@
 
 .create-group-container {
     flex: 0.7;
-    align-self: center;
+    align-self: flex-start;
     padding: 20px 10px;
     margin: 10px;
     background-color: white;
     border-radius: 20px;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: flex-start;
+}
+
+.profile-container {
+    flex: 0.7;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px 10px;
+    margin: 10px;
+}
+
+.profile-card {
+    width: min(100%, 420px);
+    background-color: white;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+.profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    align-self: center;
+    background-color: #d9d9d9;
+}
+
+.profile-avatar.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
 }
 
 .login-container {
@@ -332,6 +390,7 @@
     margin: 10px;
     transition-duration: 0.5s;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    cursor: pointer;
 }
 
 .list-items:hover {

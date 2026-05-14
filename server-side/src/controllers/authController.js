@@ -5,7 +5,8 @@ const User = require("../models/User");
 
 const {
   generateAccessToken,
-  generateRefreshToken
+  generateRefreshToken,
+  generateAuthPayload
 } = require("../services/tokenService");
 
 const register = async (req, res) => {
@@ -25,10 +26,21 @@ const register = async (req, res) => {
     const user = await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      avatarUrl: ""
     });
 
-    res.status(201).json(user);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.status(201).json({
+      user: generateAuthPayload(user),
+      accessToken,
+      refreshToken
+    });
 
   } catch (error) {
     res.status(500).json(error.message);
@@ -63,6 +75,7 @@ const login = async (req, res) => {
     await user.save();
 
     res.json({
+      user: generateAuthPayload(user),
       accessToken,
       refreshToken
     });

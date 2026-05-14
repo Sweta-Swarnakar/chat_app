@@ -4,6 +4,7 @@ import chatLogo from "../icons/chat.png";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import { readJsonResponse } from "../utils/api";
 
 export default function Login() {
   const [name, setName] = useState("");
@@ -33,33 +34,19 @@ export default function Login() {
         body: JSON.stringify(body)
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
-        setError(data.message || "Authentication failed");
+        const message = data.message || "Authentication failed";
+        setError(
+          message === "Invalid credentials"
+            ? "Invalid credentials. Please check your email/password or sign up first."
+            : message
+        );
         return;
       }
 
-      if (isSignUp) {
-        const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email, password })
-        });
-
-        const loginData = await loginResponse.json();
-
-        if (!loginResponse.ok) {
-          setError(loginData.message || "Signup successful, login failed");
-          return;
-        }
-
-        localStorage.setItem("chatAppToken", loginData.accessToken);
-      } else {
-        localStorage.setItem("chatAppToken", data.accessToken);
-      }
+      localStorage.setItem("chatAppToken", data.accessToken);
 
       navigate("/app/welcome");
     } catch (err) {
