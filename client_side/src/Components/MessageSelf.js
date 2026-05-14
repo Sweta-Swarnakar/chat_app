@@ -1,14 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
 import "./styles.css";
 
-
-export default function MessageSelf() {
- const props2 = {name: "Self", message: "sample msg 2"}
+export default function MessageSelf({ message }) {
   return (
     <div className="self-message-container">
       <div className="self-message-box">
-        <p>{props2.message}</p>
-        <p className="self-time-stamp">12.40pm</p>
+        <p>{message}</p>
+        <p className="self-time-stamp">Now</p>
       </div>
     </div>
   );
