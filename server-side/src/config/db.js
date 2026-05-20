@@ -2,12 +2,14 @@
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
+  const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/chat_app";
+
   try {
-    const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/chat_app";
     await mongoose.connect(mongoUri);
     console.log("MongoDB Connected");
   } catch (error) {
-    console.log(error);
+    console.error("MongoDB connection failed:", error.message);
+    throw error;
   }
 };
 

@@ -1,6 +1,12 @@
 
 # Production Style Chat App Backend
 
+## Architecture Notes
+
+- Controllers are intentionally thin and delegate business logic to services.
+- Validation is handled before handlers run, and errors flow through a single error middleware.
+- Pagination is built into list endpoints so the API is closer to production usage and easier to discuss in interviews.
+
 ## Features
 - JWT Access + Refresh Tokens
 - Socket.IO realtime chat

@@ -1,60 +1,55 @@
-const Group = require("../models/Group");
+const asyncHandler = require("../utils/asyncHandler");
+const { listGroups, createGroup, getGroupById, updateGroup, addMembers } = require("../services/groupService");
 
-const getGroups = async (req, res) => {
-  try {
-    const groups = await Group.find({
-      $or: [
-        { createdBy: req.user.id },
-        { members: req.user.id }
-      ]
-    })
-      .populate("createdBy", "name email avatarUrl")
-      .sort({ createdAt: -1 });
+const getGroups = asyncHandler(async (req, res) => {
+  const result = await listGroups({
+    userId: req.user.id,
+    search: req.query.search || "",
+    page: req.query.page,
+    limit: req.query.limit
+  });
+  res.json(result);
+});
 
-    res.json(groups);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+const createNewGroup = asyncHandler(async (req, res) => {
+  const result = await createGroup({
+    userId: req.user.id,
+    name: req.body.name,
+    avatarUrl: req.body.avatarUrl,
+    memberIds: req.body.memberIds || []
+  });
+  res.status(201).json(result);
+});
 
-const createGroup = async (req, res) => {
-  try {
-    const { name, avatarUrl } = req.body;
+const fetchGroupById = asyncHandler(async (req, res) => {
+  const result = await getGroupById(req.params.groupId);
+  res.json(result);
+});
 
-    if (!name || !name.trim()) {
-      return res.status(400).json({ message: "Group name is required" });
-    }
+const updateExistingGroup = asyncHandler(async (req, res) => {
+  const result = await updateGroup({
+    groupId: req.params.groupId,
+    userId: req.user.id,
+    name: req.body.name,
+    avatarUrl: req.body.avatarUrl,
+    memberIds: req.body.memberIds || []
+  });
+  res.json(result);
+});
 
-    const group = await Group.create({
-      name: name.trim(),
-      avatarUrl: avatarUrl || "",
-      createdBy: req.user.id,
-      members: [req.user.id]
-    });
-
-    res.status(201).json(group);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-const getGroupById = async (req, res) => {
-  try {
-    const group = await Group.findById(req.params.groupId)
-      .populate("createdBy", "name email avatarUrl");
-
-    if (!group) {
-      return res.status(404).json({ message: "Group not found" });
-    }
-
-    res.json(group);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+const updateGroupMembers = asyncHandler(async (req, res) => {
+  const result = await addMembers({
+    groupId: req.params.groupId,
+    userId: req.user.id,
+    memberIds: req.body.memberIds || []
+  });
+  res.json(result);
+});
 
 module.exports = {
   getGroups,
-  createGroup,
-  getGroupById
+  createGroup: createNewGroup,
+  getGroupById: fetchGroupById,
+  updateGroup: updateExistingGroup,
+  addMembers: updateGroupMembers
 };

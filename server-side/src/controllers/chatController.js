@@ -1,49 +1,25 @@
+const asyncHandler = require("../utils/asyncHandler");
+const { sendMessage, listMessages } = require("../services/chatService");
 
-const Message = require("../models/Message");
+const sendChatMessage = asyncHandler(async (req, res) => {
+  const result = await sendMessage({
+    senderId: req.user.id,
+    chatId: req.body.chatId,
+    text: req.body.text
+  });
+  res.status(201).json(result);
+});
 
-const sendMessage = async (req, res) => {
-  try {
-
-    const { chatId, text } = req.body;
-
-    if (!chatId || !text || !text.trim()) {
-      return res.status(400).json({
-        message: "chatId and text are required"
-      });
-    }
-
-    const message = await Message.create({
-      sender: req.user.id,
-      chatId,
-      text
-    });
-
-    await message.populate("sender", "name email");
-
-    res.status(201).json(message);
-
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
-
-const getMessages = async (req, res) => {
-  try {
-
-    const messages = await Message.find({
-      chatId: req.params.chatId
-    })
-      .populate("sender", "name email")
-      .sort({ createdAt: 1 });
-
-    res.json(messages);
-
-  } catch (error) {
-    res.status(500).json(error.message);
-  }
-};
+const getMessages = asyncHandler(async (req, res) => {
+  const result = await listMessages({
+    chatId: req.params.chatId,
+    page: req.query.page,
+    limit: req.query.limit
+  });
+  res.json(result);
+});
 
 module.exports = {
-  sendMessage,
+  sendMessage: sendChatMessage,
   getMessages
 };
