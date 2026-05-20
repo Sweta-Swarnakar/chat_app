@@ -1,5 +1,11 @@
 # Getting Started with Create React App
 
+## Architecture Notes
+
+- `Redux Toolkit` stores app-wide state that benefits from persistence and easy debugging: theme, cached users, current user profile, and conversation unread/hidden state.
+- `Context API` handles live session concerns: auth session state, socket connection, online presence, and logout/reset behavior.
+- This split keeps components small and makes it easy to explain why some state is global and durable while other state is runtime-only.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
