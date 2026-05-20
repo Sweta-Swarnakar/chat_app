@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./styles.css";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import { IconButton } from "@mui/material";
@@ -8,88 +8,116 @@ import SearchIcon from '@mui/icons-material/Search';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import ConversationItem from "./ConversationItem";
-import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router-dom";
 import { themeToggle } from "../features/themeSlice";
-import { clearAuthToken, getAuthToken } from "../utils/authToken";
-import { readJsonResponse } from "../utils/api";
+import { getAuthToken, getUserIdFromToken } from "../utils/authToken";
+import { hideConversation } from "../features/conversationSlice";
+import { setMe, setUsers } from "../features/userSlice";
+import { getConversationKeyFromPath, buildDirectConversationId } from "../utils/conversation";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
+import { requestJson, ApiError } from "../services/apiClient";
+import { useSession } from "../context/SessionContext";
+
+const DATA_TTL_MS = 5 * 60 * 1000;
+const EMPTY_CONVERSATION_UI = {
+  hiddenConversationIds: [],
+  unreadConversationIds: [],
+  activityByConversationId: {}
+};
+const EMPTY_USERS = [];
 
 export default function Sidebar() {
-  const [conversations, setConversations] = useState([]);
   const [error, setError] = useState("");
-  const [me, setMe] = useState(null);
-  const dispatch = useDispatch();
-  const lightTheme = useSelector((state) => state.themeKey);
+  const dispatch = useAppDispatch();
+  const lightTheme = useAppSelector((state) => state.themeKey);
+  const conversationUi = useAppSelector((state) => state.conversationKey) ?? EMPTY_CONVERSATION_UI;
+  const cachedMe = useAppSelector((state) => state.userKey?.me);
+  const cachedMeLoadedAt = useAppSelector((state) => state.userKey?.meLoadedAt);
+  const cachedUsers = useAppSelector((state) => state.userKey?.users) ?? EMPTY_USERS;
+  const cachedUsersLoadedAt = useAppSelector((state) => state.userKey?.usersLoadedAt);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { onlineUsers, logout } = useSession();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = getAuthToken();
+  const userId = getUserIdFromToken(token);
+  const activeConversationId = useMemo(
+    () => getConversationKeyFromPath(location.pathname, userId),
+    [location.pathname, userId]
+  );
 
   useEffect(() => {
-    if (!token) {
-      navigate("/");
+    if (!token || !userId) {
+      logout("/");
+      return;
+    }
+
+    const now = Date.now();
+    const usersAreFresh = cachedUsers.length > 0 && cachedUsersLoadedAt && now - cachedUsersLoadedAt < DATA_TTL_MS;
+    const meIsFresh = cachedMe && cachedMeLoadedAt && now - cachedMeLoadedAt < DATA_TTL_MS;
+
+    if (usersAreFresh && meIsFresh) {
       return;
     }
 
     const fetchUsers = async () => {
       try {
-        const [usersResponse, meResponse] = await Promise.all([
-          fetch(`${API_URL}/api/users`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }),
-          fetch(`${API_URL}/api/users/me`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          })
+        const [usersData, meData] = await Promise.all([
+          requestJson("/api/users", { baseUrl: API_URL, token }),
+          requestJson("/api/users/me", { baseUrl: API_URL, token })
         ]);
-
-        if (!usersResponse.ok) {
-          if (usersResponse.status === 401) {
-            clearAuthToken();
-            navigate("/");
-            return;
-          }
-          throw new Error("Unable to load contacts");
-        }
-
-        if (!meResponse.ok) {
-          if (meResponse.status === 401) {
-            clearAuthToken();
-            navigate("/");
-            return;
-          }
-          throw new Error("Unable to load profile");
-        }
-
-        const users = await readJsonResponse(usersResponse);
-        const meData = await readJsonResponse(meResponse);
-        setMe(meData);
-        setConversations(users.map((user) => ({
-          id: user._id,
-          kind: "user",
-          name: user.name || "User",
-          avatarUrl: user.avatarUrl || "",
-          status: user.isOnline ? "Online" : "Offline",
-          lastMessage: "Tap to chat",
-          timeStamp: new Date(user.createdAt).toLocaleDateString()
-        })));
+        const users = Array.isArray(usersData) ? usersData : usersData.data || [];
+        dispatch(setMe(meData));
+        dispatch(setUsers(users));
       } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          logout("/");
+          return;
+        }
         setError(err.message || "Failed to fetch contacts");
       }
     };
 
     fetchUsers();
-  }, [API_URL, navigate, token]);
+  }, [API_URL, cachedMe, cachedMeLoadedAt, cachedUsers, cachedUsersLoadedAt, dispatch, logout, token, userId]);
+
+  const visibleConversations = useMemo(() => cachedUsers
+    .map((user) => ({
+      chatId: buildDirectConversationId(userId, user._id),
+      routeId: user._id,
+      id: user._id,
+      kind: "user",
+      name: user.name || "User",
+      avatarUrl: user.avatarUrl || "",
+      status: onlineUsers.includes(user._id) ? "Online" : "Offline",
+      lastMessage: "Tap to chat",
+      timeStamp: new Date(user.createdAt).toLocaleDateString()
+    }))
+    .filter((conversation) => !conversationUi.hiddenConversationIds.includes(conversation.chatId))
+    .map((conversation) => {
+      const activity = conversationUi.activityByConversationId[conversation.chatId];
+      return {
+        ...conversation,
+        lastMessage: activity?.lastMessage || conversation.lastMessage,
+        timeStamp: activity?.timeStamp || conversation.timeStamp,
+        isUnread: conversationUi.unreadConversationIds.includes(conversation.chatId)
+      };
+    }), [cachedUsers, conversationUi.activityByConversationId, conversationUi.hiddenConversationIds, conversationUi.unreadConversationIds, onlineUsers, userId]);
+
+  const handleDeleteConversation = (conversation) => {
+    dispatch(hideConversation(conversation.chatId));
+    if (activeConversationId === conversation.chatId) {
+      navigate("/app/welcome", { replace: true });
+    }
+  };
 
   return (
     <div className="sidebar-container">
       <div className={`sb-header ${lightTheme ? "" : "dark"}`}>
         <div>
           <IconButton onClick={() => navigate("/app/profile")}>
-            {me?.avatarUrl
-              ? <img className="avatar-image header-avatar" src={me.avatarUrl} alt={me?.name || "profile"} />
+            {cachedMe?.avatarUrl
+              ? <img className="avatar-image header-avatar" src={cachedMe.avatarUrl} alt={cachedMe?.name || "profile"} />
               : <AccountCircleIcon className={`icon ${lightTheme ? "" : "dark"}`} />}
           </IconButton>
         </div>
@@ -116,9 +144,13 @@ export default function Sidebar() {
       </div>
       <div className={`sb-convo ${lightTheme ? "" : "dark"}`}>
         {error ? <div className="error-message">{error}</div> : null}
-        {conversations.length === 0 && !error ? <p className="empty-state">No conversations yet.</p> : null}
-        {conversations.map((conversation) => (
-          <ConversationItem key={conversation.id} props={conversation} />
+        {visibleConversations.length === 0 && !error ? <p className="empty-state">No conversations yet.</p> : null}
+        {visibleConversations.map((conversation) => (
+          <ConversationItem
+            key={conversation.chatId}
+            props={conversation}
+            onDelete={handleDeleteConversation}
+          />
         ))}
       </div>
     </div>

@@ -1,5 +1,5 @@
 .main-conatainer{
-    background-color: rgba(211, 155, 202, 0.395);
+    background-color: var(--surface);
     width: 90vw;
     height: 90vh;
     display: flex;
@@ -13,8 +13,8 @@
 }
 
 .dark {
-    background-color: #070F2B !important;
-    color: whitesmoke !important;
+    background-color: var(--surface-soft) !important;
+    color: var(--text-primary) !important;
 }
 
 .icon {
@@ -23,7 +23,7 @@
 }
 
 .sb-header {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 8px 5px;
     margin: 5px;
@@ -33,7 +33,7 @@
 }
 
 .sb-search{
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 5px 5px;
     margin: 5px;
@@ -47,11 +47,12 @@
     border: none;
     margin-left: 10px;
     font-size: 1.25rem;
-    color: black;
+    color: var(--text-primary);
+    background: transparent;
 }
 
 .sb-convo {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 10px 5px;
     margin: 5px; 
@@ -60,10 +61,9 @@
 }
 
 .conversation-container {
-    display: grid;
-    grid-template-columns: 32px auto auto;
-    grid-template-rows: auto auto;
-    column-gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 5px;
     margin: 5px;
     border-radius: 20px;
@@ -71,21 +71,25 @@
     cursor: pointer;
 }
 
+.conversation-container.unread {
+    background-color: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+}
+
 .conversation-container:hover {
-    background-color: palegoldenrod;
+    background-color: rgba(244, 114, 182, 0.12);
 
 }
 
 .conversation-container:active {
-    background-color: palegoldenrod;
+    background-color: rgba(244, 114, 182, 0.18);
 
 }
 .avatar-icon {
-    grid-area: 1/1/3/2;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: grey;
+    background-color: #64748b;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 2rem;
     height: 32px;
@@ -109,36 +113,109 @@
     background-color: #d9d9d9;
 }
 
+.chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+}
+
 .list-avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
+    object-fit: cover;
+}
+
+.header-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #d9d9d9;
+}
+
+.chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #d9d9d9;
+}
+
+.avatar-wrap {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+}
+
+.status-dot {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+}
+
+.online-dot {
+    background-color: #22c55e;
+}
+
+.offline-dot {
+    background-color: #9ca3af;
 }
 
 .con-title {
-   grid-area: 1/2/2/4;
    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
    font-weight: bold;
+   margin: 0;
+}
+
+.unread-title {
+    color: var(--accent);
 }
 
 .con-time-stamp {
-    justify-self: flex-end;
     font-size: 0.75rem;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin-left: auto;
+    white-space: nowrap;
+    align-self: flex-start;
 
 }
 
 .con-last-msg {
-    justify-self: flex-start;
     font-size: 0.75rem;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
 
 } 
 
-.con-time-stamp {
-    justify-self: flex-end;
-    font-size: 0.75rem;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.conversation-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    gap: 2px;
+}
+
+.list-items .MuiIconButton-root {
+    margin-left: auto;
+}
+
+.conversation-delete-btn {
+    margin-left: auto !important;
+    color: #6b7280 !important;
+    opacity: 0.7;
+}
+
+.conversation-delete-btn:hover {
+    opacity: 1;
+    background-color: rgba(239, 68, 68, 0.12) !important;
+    color: #ef4444 !important;
 }
 
 .chat-area-container {
@@ -148,7 +225,7 @@
 }
 
 .chat-area-header {
-    background-color: white;
+    background-color: var(--surface);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -165,7 +242,7 @@
     flex: 1;
 }
 .message-container {
-    background-color: wheat;
+    background-color: var(--surface-soft);
     flex: 1;
     padding: 10px;
     margin: 10px;
@@ -180,7 +257,7 @@
 }
 
 .input-text-area {
-    background-color: white;
+    background-color: var(--surface);
     padding: 10px;
     margin: 10px;
     border-radius: 20px;
@@ -205,23 +282,26 @@
 }
 
 .other-text-content {
-    background-color: rgb(212, 202, 202);
+    background-color: var(--bubble-incoming);
+    color: var(--bubble-incoming-text);
     padding: 10px;
     margin: 10px;
     border-radius: 20px;
     width: max-content;
     margin-top: 10px;
     flex-direction: column;
+    border: 1px solid var(--accent-soft);
 }
 
 .self-message-box {
-    background-color: rgb(12, 146, 101);
-    color: white;
+    background-color: var(--bubble-outgoing);
+    color: var(--bubble-outgoing-text);
     width: max-content;
     padding: 10px;
     margin: 5px;
     border-radius: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-shadow: 0 10px 20px rgba(217, 70, 136, 0.18);
 }
 
 
@@ -240,8 +320,8 @@
     align-items: center;
     gap: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    columns: black;
-    border-bottom: 5px solid skyblue;
+    color: var(--text-primary);
+    border-bottom: 5px solid var(--accent);
     border-radius: 20px;
 }
 .welcome-logo {
@@ -253,7 +333,7 @@
     align-self: flex-start;
     padding: 20px 10px;
     margin: 10px;
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     display: flex;
     flex-direction: column;
@@ -272,7 +352,7 @@
 
 .profile-card {
     width: min(100%, 420px);
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 24px;
     display: flex;
@@ -298,10 +378,37 @@
     color: white;
 }
 
+.group-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.member-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.member-picker-title {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 700;
+}
+
+.member-list {
+    max-height: 220px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 4px;
+}
+
 .login-container {
     display: flex;
     width: 90vw;
-    background-color: white;
+    background-color: var(--surface);
     padding: 10px;
     margin: 10px;
     border-radius: 20px;
@@ -320,11 +427,11 @@
 
 .login-box {
     flex: 0.7;
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     margin: 10px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #63d7b0;
+    color: var(--text-secondary);
     font-weight: bolder;
     display: flex;
     justify-content: center;
@@ -334,17 +441,17 @@
 }
 
 .login-banner {
-    color: palevioletred;
+    color: var(--accent);
     font-size: 40px;
     margin-bottom: 10px;
 }
 
 .login-box .css-sghohy-MuiButtonBase-root-MuiButton-root {
-    background-color: palevioletred;
+    background-color: var(--accent);
 }
 
 .login-box .css-sghohy-MuiButtonBase-root-MuiButton-root:hover {
-    background-color: palevioletred;
+    background-color: var(--accent);
 }
 
 .user-groups-list-container {
@@ -353,7 +460,7 @@
 }
 
 .ug-header {
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 15px;
     margin: 10px;
@@ -363,7 +470,7 @@
 }
 
 .ug-title {
-   color: black;
+   color: var(--text-primary);
     margin-left: 10px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: bolder;
@@ -384,7 +491,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background-color: white;
+    background-color: var(--surface);
     border-radius: 20px;
     padding: 10px;
     margin: 10px;
@@ -394,11 +501,11 @@
 }
 
 .list-items:hover {
-  background-color: lightgray;
+  background-color: rgba(148, 163, 184, 0.16);
 }
 
 .list-items:active {
-    background-color: lightgray;
+    background-color: rgba(148, 163, 184, 0.22);
 }
 
 @media only screen and (max-width: 40em) { 
@@ -425,5 +532,86 @@
         width: 100wh;
     }
 } 
-    
-  
+
+.theme-dark .sb-header,
+.theme-dark .sb-search,
+.theme-dark .sb-convo,
+.theme-dark .chat-area-header,
+.theme-dark .message-container,
+.theme-dark .input-text-area,
+.theme-dark .create-group-container,
+.theme-dark .profile-card,
+.theme-dark .login-container,
+.theme-dark .login-box,
+.theme-dark .ug-header,
+.theme-dark .list-items {
+    box-shadow: rgba(0, 0, 0, 0.45) 0px 10px 30px;
+}
+
+.theme-dark .search-box::placeholder,
+.theme-dark .con-last-msg,
+.theme-dark .con-time-stamp,
+.theme-dark .self-time-stamp {
+    color: var(--text-secondary);
+}
+
+.theme-dark .welcome-container,
+.theme-dark .login-box,
+.theme-dark .profile-card,
+.theme-dark .create-group-container,
+.theme-dark .ug-title,
+.theme-dark .con-title,
+.theme-dark .header-text,
+.theme-dark .member-picker-title,
+.theme-dark .message-container {
+    color: var(--text-primary);
+}
+
+.theme-dark .conversation-container:hover {
+    background-color: rgba(244, 114, 182, 0.14);
+}
+
+.theme-dark .conversation-container:active {
+    background-color: rgba(244, 114, 182, 0.2);
+}
+
+.theme-dark .input-text-area .MuiSvgIcon-root,
+.theme-dark .conversation-delete-btn {
+    color: var(--text-secondary) !important;
+}
+
+.theme-dark .conversation-delete-btn:hover {
+    color: #f87171 !important;
+    background-color: rgba(248, 113, 113, 0.12) !important;
+}
+
+.theme-dark .profile-avatar.placeholder,
+.theme-dark .avatar-icon {
+    background-color: #334155;
+}
+
+.theme-dark .self-message-box {
+    background-color: var(--bubble-outgoing);
+}
+
+.theme-dark .image-container {
+    background: linear-gradient(180deg, rgba(244, 114, 182, 0.24), rgba(15, 23, 42, 0.5));
+}
+
+.theme-dark .other-text-content {
+    background-color: var(--bubble-incoming);
+    color: var(--bubble-incoming-text);
+    border-color: rgba(244, 114, 182, 0.25);
+}
+
+.theme-dark .login-box .MuiInputBase-root,
+.theme-dark .profile-card .MuiInputBase-root,
+.theme-dark .create-group-container .MuiInputBase-root {
+    color: var(--text-primary);
+}
+
+.theme-dark .login-box .MuiInputLabel-root,
+.theme-dark .profile-card .MuiInputLabel-root,
+.theme-dark .create-group-container .MuiInputLabel-root {
+    color: var(--text-secondary);
+}

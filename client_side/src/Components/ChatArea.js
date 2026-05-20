@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import './styles.css';
 import { IconButton } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SendIcon from '@mui/icons-material/Send';
 import MessageSelf from './MessageSelf';
 import Messageothers from './MessageOthers';
-import { useSelector } from 'react-redux';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { clearAuthToken, getAuthToken } from "../utils/authToken";
-import { readJsonResponse } from "../utils/api";
+import { useAppDispatch } from '../hooks/reduxHooks';
+import { useLocation, useParams } from 'react-router-dom';
+import { getAuthToken } from "../utils/authToken";
+import { requestJson, ApiError } from "../services/apiClient";
+import { markConversationRead, upsertConversationActivity } from "../features/conversationSlice";
+import { useSession } from '../context/SessionContext';
+import { useAppSelector } from '../hooks/reduxHooks';
 
 export default function ChatArea() {
-  const lightTheme = useSelector((state) => state.themeKey);
-  const navigate = useNavigate();
+  const lightTheme = useAppSelector((state) => state.themeKey);
+  const dispatch = useAppDispatch();
   const location = useLocation();
   const { chatId: routeChatId } = useParams();
   const initialChatMeta = location.state || {};
@@ -21,31 +23,27 @@ export default function ChatArea() {
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState("");
   const chatId = routeChatId || "general";
+  const { socket, userId, logout, isAuthenticated } = useSession();
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = getAuthToken();
 
-  const getUserIdFromToken = (tokenString) => {
-    if (!tokenString) return null;
-    const payload = tokenString.split('.')[1];
-    if (!payload) return null;
-    try {
-      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-      return decoded.id;
-    } catch {
-      return null;
-    }
-  };
-
-  const currentUserId = getUserIdFromToken(token);
+  const currentUserId = userId;
+  const isGroupChat = chatId.startsWith("group:");
+  const directPartnerId = isGroupChat ? null : chatId;
+  const conversationId = isGroupChat
+    ? chatId
+    : currentUserId && directPartnerId
+      ? `direct:${[currentUserId, directPartnerId].sort().join("_")}`
+      : chatId;
 
   useEffect(() => {
     setChatMeta(location.state || {});
   }, [location.state, chatId]);
 
   useEffect(() => {
-    if (!token) {
-      navigate("/");
+    if (!token || !currentUserId || !isAuthenticated) {
+      logout("/");
       return;
     }
 
@@ -55,18 +53,9 @@ export default function ChatArea() {
       }
 
       try {
-        const isGroupChat = chatId.startsWith("group:");
-        const resourceId = isGroupChat ? chatId.replace("group:", "") : chatId;
+        const resourceId = isGroupChat ? chatId.replace("group:", "") : directPartnerId;
         const endpoint = isGroupChat ? `/api/groups/${resourceId}` : `/api/users/${resourceId}`;
-        const response = await fetch(`${API_URL}${endpoint}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-          return;
-        }
-
-        const data = await readJsonResponse(response);
+        const data = await requestJson(endpoint, { baseUrl: API_URL, token });
         setChatMeta({
           kind: isGroupChat ? "group" : "user",
           id: data._id,
@@ -81,58 +70,54 @@ export default function ChatArea() {
 
     const fetchMessages = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/chat/${chatId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            clearAuthToken();
-            navigate("/");
-            return;
-          }
-          throw new Error("Could not load messages");
-        }
-
-        const data = await readJsonResponse(response);
-        setMessages(data);
+        const data = await requestJson(`/api/chat/${conversationId}`, { baseUrl: API_URL, token });
+        setMessages(Array.isArray(data) ? data : data.data || []);
       } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          logout("/");
+          return;
+        }
         setError(err.message || "Failed to load messages");
       }
     };
 
     fetchChatMeta();
     fetchMessages();
-  }, [API_URL, chatId, chatMeta?.name, navigate, token]);
+    dispatch(markConversationRead(conversationId));
+  }, [API_URL, chatId, chatMeta?.name, conversationId, currentUserId, directPartnerId, dispatch, isAuthenticated, isGroupChat, logout, token]);
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/chat/message`, {
+      const newMessage = await requestJson("/api/chat/message", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ chatId, text: inputText })
+        baseUrl: API_URL,
+        token,
+        body: { chatId: conversationId, text: inputText }
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearAuthToken();
-          navigate("/");
-          return;
-        }
-        throw new Error("Could not send message");
-      }
-
-      const newMessage = await readJsonResponse(response);
       setMessages((prev) => [...prev, newMessage]);
+      dispatch(upsertConversationActivity({
+        conversationId,
+        lastMessage: newMessage.text,
+        timeStamp: newMessage.createdAt ? new Date(newMessage.createdAt).toLocaleDateString() : new Date().toLocaleDateString()
+      }));
+      dispatch(markConversationRead(conversationId));
+      if (!isGroupChat) {
+        socket?.emit("send_message", {
+          receiverId: directPartnerId,
+          chatId: conversationId,
+          senderId: currentUserId,
+          text: newMessage.text,
+          message: newMessage
+        });
+      }
       setInputText("");
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout("/");
+        return;
+      }
       setError(err.message || "Failed to send message");
     }
   };
@@ -149,7 +134,6 @@ export default function ChatArea() {
     return sender.name || "User";
   };
 
-  const isGroupChat = chatId.startsWith("group:");
   const headerName = chatMeta.name || (isGroupChat ? "Group" : "Chat");
   const headerStatus = chatMeta.status || (isGroupChat ? "Group chat" : "Direct chat");
   const headerAvatar = chatMeta.avatarUrl || "";
@@ -158,15 +142,12 @@ export default function ChatArea() {
     <div className={`chat-area-container ${lightTheme ? "" : "dark"}`}>
       <div className={`chat-area-header ${lightTheme ? "" : "dark"}`}>
         {headerAvatar
-          ? <img className="avatar-image header-avatar" src={headerAvatar} alt={headerName} />
+          ? <img className="avatar-image chat-avatar" src={headerAvatar} alt={headerName} />
           : <p className='avatar-icon'>{headerName[0] || "C"}</p>}
         <div className='header-text'>
           <p className='con-title'>{headerName}</p>
           <p className='con-time-stamp'>{headerStatus}</p>
         </div>
-        <IconButton>
-          <DeleteOutlineIcon />
-        </IconButton>
       </div>
 
       {error && <div className="error-message">{error}</div>}

@@ -4,7 +4,8 @@ import chatLogo from "../icons/chat.png";
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
-import { readJsonResponse } from "../utils/api";
+import { requestJson, ApiError } from "../services/apiClient";
+import { useSession } from "../context/SessionContext";
 
 export default function Login() {
   const [name, setName] = useState("");
@@ -13,9 +14,10 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useSession();
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
-  const authUrl = isSignUp ? `${API_URL}/api/auth/register` : `${API_URL}/api/auth/login`;
+  const authPath = isSignUp ? "/api/auth/register" : "/api/auth/login";
 
   const handleAuth = async (event) => {
     event.preventDefault();
@@ -26,18 +28,17 @@ export default function Login() {
       : { email, password };
 
     try {
-      const response = await fetch(authUrl, {
+      const data = await requestJson(authPath, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
+        body,
+        baseUrl: API_URL,
+        token: null
       });
-
-      const data = await readJsonResponse(response);
-
-      if (!response.ok) {
-        const message = data.message || "Authentication failed";
+      login(data.accessToken);
+      navigate("/app/welcome", { replace: true });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const message = err.data?.message || err.message || "Authentication failed";
         setError(
           message === "Invalid credentials"
             ? "Invalid credentials. Please check your email/password or sign up first."
@@ -45,11 +46,6 @@ export default function Login() {
         );
         return;
       }
-
-      localStorage.setItem("chatAppToken", data.accessToken);
-
-      navigate("/app/welcome");
-    } catch (err) {
       setError("Unable to connect to the server");
     }
   };

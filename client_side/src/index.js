@@ -4,6 +4,7 @@ import App from './App';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store} from './features/store';
+import { SessionProvider } from './context/SessionContext';
 //import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -11,7 +12,9 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <Provider store={store}>
-        <App />
+        <SessionProvider>
+          <App />
+        </SessionProvider>
       </Provider>
     </BrowserRouter>
   </React.StrictMode>

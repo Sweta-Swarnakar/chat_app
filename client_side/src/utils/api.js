@@ -8,8 +8,8 @@ export const readJsonResponse = async (response) => {
   const text = await response.text();
 
   if (text.trim().startsWith("<")) {
-    throw new Error("API returned HTML instead of JSON. Check the backend URL and restart the server.");
+    throw new Error(`API returned HTML instead of JSON for ${response.url}. Check the backend URL and restart the server.`);
   }
 
-  throw new Error(text || response.statusText || "Unexpected response from API");
+  throw new Error(text || response.statusText || `Unexpected response from ${response.url}`);
 };

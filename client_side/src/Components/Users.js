@@ -2,46 +2,58 @@ import { IconButton } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import SearchIcon from '@mui/icons-material/Search';
 import smallIcon from '../icons/small_icon.png';
-import { clearAuthToken, getAuthToken } from "../utils/authToken";
 import { useNavigate } from "react-router-dom";
-import { readJsonResponse } from "../utils/api";
+import { getAuthToken } from "../utils/authToken";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
+import { setUsers } from "../features/userSlice";
+import { requestJson, ApiError } from "../services/apiClient";
+import { useSession } from "../context/SessionContext";
+
+const DATA_TTL_MS = 5 * 60 * 1000;
+const EMPTY_USERS = [];
 
 export default function Users() {
-  const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = getAuthToken();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const cachedUsers = useAppSelector((state) => state.userKey?.users) ?? EMPTY_USERS;
+  const cachedUsersLoadedAt = useAppSelector((state) => state.userKey?.usersLoadedAt);
+  const { logout } = useSession();
+  const [users, setUsersLocal] = useState(cachedUsers);
 
   useEffect(() => {
+    if (!token) {
+      navigate("/");
+      return;
+    }
+
+    const now = Date.now();
+    const usersAreFresh = cachedUsers.length > 0 && cachedUsersLoadedAt && now - cachedUsersLoadedAt < DATA_TTL_MS;
+
+    if (usersAreFresh) {
+      setUsersLocal(cachedUsers);
+      return;
+    }
+
     const fetchUsers = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            clearAuthToken();
-            window.location.href = "/";
-            return;
-          }
-          throw new Error("Unable to load users");
-        }
-
-        const data = await readJsonResponse(response);
-        setUsers(data);
+        const data = await requestJson("/api/users", { baseUrl: API_URL, token });
+        const list = Array.isArray(data) ? data : data.data || [];
+        setUsersLocal(list);
+        dispatch(setUsers(list));
       } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          logout("/");
+          return;
+        }
         setError(err.message || "Failed to fetch users");
       }
     };
 
-    if (token) {
-      fetchUsers();
-    }
-  }, [API_URL, token]);
+    fetchUsers();
+  }, [API_URL, cachedUsers, cachedUsersLoadedAt, dispatch, logout, navigate, token]);
 
   return (
     <div className="user-groups-list-container">
@@ -64,9 +76,12 @@ export default function Users() {
             className="list-items"
             onClick={() => navigate(`/app/chat/${user._id}`, { state: { kind: "user", id: user._id, name: user.name, avatarUrl: user.avatarUrl, status: user.isOnline ? "Online" : "Offline" } })}
           >
-            {user.avatarUrl
-              ? <img className="avatar-image list-avatar" src={user.avatarUrl} alt={user.name || "user"} />
-              : <p className="avatar-icon">{user.name?.[0] || "U"}</p>}
+            <div className="avatar-wrap">
+              {user.avatarUrl
+                ? <img className="avatar-image list-avatar" src={user.avatarUrl} alt={user.name || "user"} />
+                : <p className="avatar-icon">{user.name?.[0] || "U"}</p>}
+              <span className={`status-dot ${user.isOnline ? "online-dot" : "offline-dot"}`} />
+            </div>
             <p className="con-title">{user.name || "User"}</p>
           </div>
         ))}

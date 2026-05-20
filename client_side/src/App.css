@@ -1,10 +1,54 @@
 *{
   margin: 0;
+  box-sizing: border-box;
 }
+
+:root {
+  --app-bg: #f8edf2;
+  --surface: #ffffff;
+  --surface-soft: #fff4f8;
+  --text-primary: #111827;
+  --text-secondary: #6b5564;
+  --accent: #d94688;
+  --accent-soft: #ffe3ef;
+  --bubble-incoming: #ffe7f1;
+  --bubble-incoming-text: #4b2037;
+  --bubble-outgoing: #d94688;
+  --bubble-outgoing-text: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light {
+  background: var(--app-bg);
+  color: var(--text-primary);
+}
+
+body.theme-dark {
+  --app-bg: #160c13;
+  --surface: #1f151c;
+  --surface-soft: #2b1b25;
+  --text-primary: #f9fafb;
+  --text-secondary: #d7b8c9;
+  --accent: #f472b6;
+  --accent-soft: rgba(244, 114, 182, 0.18);
+  --bubble-incoming: #2c1e27;
+  --bubble-incoming-text: #f8d9e6;
+  --bubble-outgoing: #b83276;
+  --bubble-outgoing-text: #fff7fb;
+  --border: rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at top, #361625 0%, #1f151c 50%, #12080f 100%);
+  color: var(--text-primary);
+}
+
 .App{
-  background-color: lightgray;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.App.theme-dark {
+  background: transparent;
 }

@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Button, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { clearAuthToken, getAuthToken } from "../utils/authToken";
-import { readJsonResponse } from "../utils/api";
+import { getAuthToken } from "../utils/authToken";
+import { requestJson, ApiError } from "../services/apiClient";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
+import { setMe } from "../features/userSlice";
+import { useSession } from "../context/SessionContext";
+
+const DATA_TTL_MS = 5 * 60 * 1000;
 
 export default function Profile() {
   const [name, setName] = useState("");
@@ -10,37 +15,45 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = getAuthToken();
+  const cachedMe = useAppSelector((state) => state.userKey?.me);
+  const cachedMeLoadedAt = useAppSelector((state) => state.userKey?.meLoadedAt);
+  const { logout } = useSession();
 
   useEffect(() => {
+    if (!token) {
+      navigate("/");
+      return;
+    }
+
+    const now = Date.now();
+    const meIsFresh = cachedMe && cachedMeLoadedAt && now - cachedMeLoadedAt < DATA_TTL_MS;
+
+    if (meIsFresh) {
+      setName(cachedMe.name || "");
+      setAvatarUrl(cachedMe.avatarUrl || "");
+      setPreview(cachedMe.avatarUrl || "");
+      return;
+    }
+
     const loadProfile = async () => {
-      if (!token) {
-        navigate("/");
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/api/users/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearAuthToken();
-          navigate("/");
-          return;
-        }
-        throw new Error("Could not load profile");
-      }
-
-      const data = await readJsonResponse(response);
+      const data = await requestJson("/api/users/me", { baseUrl: API_URL, token });
       setName(data.name || "");
       setAvatarUrl(data.avatarUrl || "");
       setPreview(data.avatarUrl || "");
+      dispatch(setMe(data));
     };
 
-    loadProfile().catch((err) => setError(err.message || "Failed to load profile"));
-  }, [API_URL, navigate, token]);
+    loadProfile().catch((err) => {
+      if (err instanceof ApiError && err.status === 401) {
+        logout("/");
+        return;
+      }
+      setError(err.message || "Failed to load profile");
+    });
+  }, [API_URL, cachedMe, cachedMeLoadedAt, dispatch, logout, navigate, token]);
 
   const handleFileChange = (event) => {
     const file = event.target.files?.[0];
@@ -57,31 +70,22 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/users/me`, {
+      const data = await requestJson("/api/users/me", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ name, avatarUrl })
+        baseUrl: API_URL,
+        token,
+        body: { name, avatarUrl }
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearAuthToken();
-          navigate("/");
-          return;
-        }
-        const data = await readJsonResponse(response);
-        throw new Error(data.message || "Could not save profile");
-      }
-
-      const data = await readJsonResponse(response);
       setName(data.name || "");
       setAvatarUrl(data.avatarUrl || "");
       setPreview(data.avatarUrl || "");
+      dispatch(setMe(data));
       navigate("/app/welcome");
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout("/");
+        return;
+      }
       setError(err.message || "Failed to save profile");
     }
   };
