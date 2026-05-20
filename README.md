@@ -32,6 +32,4 @@ Open the client in your browser (usually `http://localhost:3000`).
 - Environment variables and DB configuration live in `server-side/src/config/`.
 - Socket handling is implemented in `server-side/src/sockets/socketHandler.js`.
 
-## License
 
-MIT
