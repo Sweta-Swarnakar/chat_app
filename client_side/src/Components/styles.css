@@ -4,12 +4,17 @@
     height: 90vh;
     display: flex;
     border-radius: 20px;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
 }
 
 .sidebar-container {
     flex: 0.3;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    min-height: 0;
 }
 
 .dark {
@@ -222,6 +227,8 @@
     display: flex;
     flex-direction: column;
     flex: 0.7;
+    min-width: 0;
+    min-height: 0;
 }
 
 .chat-area-header {
@@ -244,6 +251,7 @@
 .message-container {
     background-color: var(--surface-soft);
     flex: 1;
+    min-height: 0;
     padding: 10px;
     margin: 10px;
     border-radius: 20px;
@@ -269,28 +277,33 @@
 .other-msg-container {
     display: flex;
     justify-content: flex-start;
+    align-items: flex-end;
+    gap: 10px;
     border-radius: 20px;
     padding: 5px;
     margin: 10px;
-    max-width: 40%;
+    max-width: 60%;
 
 }
 
 .self-message-container {
     display: flex;
     justify-content: flex-end;
+    align-items: flex-end;
+    gap: 10px;
+    margin: 10px;
 }
 
 .other-text-content {
     background-color: var(--bubble-incoming);
     color: var(--bubble-incoming-text);
     padding: 10px;
-    margin: 10px;
     border-radius: 20px;
     width: max-content;
     margin-top: 10px;
     flex-direction: column;
     border: 1px solid var(--accent-soft);
+    max-width: calc(100% - 42px);
 }
 
 .self-message-box {
@@ -298,10 +311,10 @@
     color: var(--bubble-outgoing-text);
     width: max-content;
     padding: 10px;
-    margin: 5px;
     border-radius: 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     box-shadow: 0 10px 20px rgba(217, 70, 136, 0.18);
+    max-width: calc(100% - 42px);
 }
 
 
@@ -310,6 +323,25 @@
     font-size: 0.75rem;
     font-weight: lighter;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.message-avatar-wrap {
+    flex: 0 0 32px;
+    align-self: flex-end;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #d9d9d9;
+    display: block;
+}
+
+.message-avatar-fallback {
+    margin: 0;
+    font-size: 1rem;
 }
 
 .welcome-container {
@@ -438,6 +470,7 @@
     align-items: center;
     flex-direction: column;
     gap: 10px;
+    min-height: 0;
 }
 
 .login-banner {
@@ -457,6 +490,7 @@
 .user-groups-list-container {
     flex: 0.7;
     flex-direction: column;
+    min-width: 0;
 }
 
 .ug-header {
@@ -509,29 +543,192 @@
 }
 
 @media only screen and (max-width: 40em) { 
-    .sb-search  {
-        display: none;
+    .App {
+        padding: 0;
     }
 
-    .sb-convo  {
-        display: none;
-    }
-    .sb-header {
-        flex-direction: column;
-        flex: 1;
-        width: min-content;
-    }
-    .chat-area-container {
-        flex-grow: 1;
-    }
-    .sidebar-container {
-        flex-grow: 0;
-    }
     .main-conatainer {
+        flex-direction: column;
         height: 100vh;
-        width: 100wh;
+        width: 100vw;
+        border-radius: 0;
     }
-} 
+
+    .sidebar-container {
+        flex: 0 0 auto;
+        width: 100%;
+        max-height: 36vh;
+        overflow: hidden;
+    }
+
+    .sb-search,
+    .sb-convo,
+    .sb-header,
+    .chat-area-header,
+    .message-container,
+    .input-text-area,
+    .ug-header,
+    .ug-list,
+    .user-groups-list-container,
+    .welcome-container,
+    .create-group-container,
+    .profile-container,
+    .profile-card {
+        margin-left: 8px;
+        margin-right: 8px;
+    }
+
+    .sb-header {
+        flex-direction: row;
+        width: calc(100% - 16px);
+        align-self: center;
+    }
+
+    .sb-search {
+        width: calc(100% - 16px);
+        align-self: center;
+    }
+
+    .sb-convo {
+        width: calc(100% - 16px);
+        align-self: center;
+        max-height: calc(36vh - 92px);
+        overflow: auto;
+    }
+
+    .chat-area-container {
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 0;
+    }
+
+    .chat-area-header,
+    .message-container,
+    .input-text-area {
+        width: calc(100% - 16px);
+    }
+
+    .message-container {
+        margin-top: 0;
+        margin-bottom: 8px;
+    }
+
+    .other-msg-container {
+        max-width: 92%;
+        margin: 8px 0;
+    }
+
+    .self-message-container {
+        margin: 8px 0;
+    }
+
+    .self-message-box,
+    .other-text-content {
+        max-width: calc(100vw - 96px);
+    }
+
+    .login-container {
+        width: 100vw;
+        min-height: 100vh;
+        height: auto;
+        margin: 0;
+        border-radius: 0;
+        padding: 0;
+        flex-direction: column;
+        overflow: auto;
+    }
+
+    .image-container {
+        width: 100%;
+        flex: 0 0 auto;
+        min-height: 220px;
+        padding: 24px;
+    }
+
+    .welcome-logo {
+        width: min(70vw, 240px);
+        height: auto;
+    }
+
+    .login-box {
+        width: 100%;
+        margin: 0;
+        padding: 24px 16px 32px;
+        border-radius: 0;
+    }
+
+    .welcome-container {
+        width: calc(100% - 16px);
+        min-height: calc(64vh - 16px);
+        align-self: center;
+        padding: 20px;
+    }
+
+    .welcome-logo {
+        height: auto;
+        max-width: 220px;
+    }
+
+    .create-group-container,
+    .profile-container,
+    .user-groups-list-container {
+        width: 100%;
+    }
+
+    .create-group-container {
+        margin-top: 8px;
+        margin-bottom: 8px;
+        padding: 16px 12px;
+    }
+
+    .profile-container {
+        padding: 16px 8px;
+    }
+
+    .profile-card {
+        width: 100%;
+        padding: 18px;
+    }
+
+    .ug-list {
+        padding: 4px 0 8px;
+        max-height: none;
+    }
+
+    .list-items {
+        margin: 8px;
+        padding: 10px 12px;
+    }
+
+    .group-preview-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .member-list {
+        max-height: 180px;
+    }
+
+    .message-avatar-wrap,
+    .avatar-wrap {
+        width: 28px;
+        height: 28px;
+        flex-basis: 28px;
+    }
+
+    .message-avatar,
+    .avatar-icon,
+    .header-avatar,
+    .chat-avatar,
+    .list-avatar {
+        width: 28px;
+        height: 28px;
+    }
+
+    .avatar-icon {
+        font-size: 1rem;
+    }
+}
 
 .theme-dark .sb-header,
 .theme-dark .sb-search,

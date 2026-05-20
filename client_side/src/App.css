@@ -47,8 +47,16 @@ body.theme-dark {
   align-items: center;
   background: transparent;
   color: var(--text-primary);
+  padding: 16px;
 }
 
 .App.theme-dark {
   background: transparent;
+}
+
+@media only screen and (max-width: 40em) {
+  .App {
+    padding: 0;
+    align-items: stretch;
+  }
 }

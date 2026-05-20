@@ -1,29 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './styles.css';
 import { IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import MessageSelf from './MessageSelf';
 import Messageothers from './MessageOthers';
-import { useAppDispatch } from '../hooks/reduxHooks';
+import { useAppDispatch, useAppSelector } from '../hooks/reduxHooks';
 import { useLocation, useParams } from 'react-router-dom';
 import { getAuthToken } from "../utils/authToken";
 import { requestJson, ApiError } from "../services/apiClient";
 import { markConversationRead, upsertConversationActivity } from "../features/conversationSlice";
 import { useSession } from '../context/SessionContext';
-import { useAppSelector } from '../hooks/reduxHooks';
 
 export default function ChatArea() {
   const lightTheme = useAppSelector((state) => state.themeKey);
+  const cachedMe = useAppSelector((state) => state.userKey?.me);
   const dispatch = useAppDispatch();
   const location = useLocation();
   const { chatId: routeChatId } = useParams();
   const initialChatMeta = location.state || {};
+  const routeChatMeta = location.state || {};
   const [chatMeta, setChatMeta] = useState(initialChatMeta);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState("");
+  const messageContainerRef = useRef(null);
+  const stickToBottomRef = useRef(true);
   const chatId = routeChatId || "general";
-  const { socket, userId, logout, isAuthenticated } = useSession();
+  const { socket, emitSocketEvent, userId, logout, isAuthenticated } = useSession();
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const token = getAuthToken();
@@ -48,7 +51,7 @@ export default function ChatArea() {
     }
 
     const fetchChatMeta = async () => {
-      if (chatMeta?.name) {
+      if (routeChatMeta?.name) {
         return;
       }
 
@@ -84,19 +87,100 @@ export default function ChatArea() {
     fetchChatMeta();
     fetchMessages();
     dispatch(markConversationRead(conversationId));
-  }, [API_URL, chatId, chatMeta?.name, conversationId, currentUserId, directPartnerId, dispatch, isAuthenticated, isGroupChat, logout, token]);
+  }, [API_URL, chatId, conversationId, currentUserId, directPartnerId, dispatch, isAuthenticated, isGroupChat, logout, routeChatMeta?.name, token]);
+
+  useEffect(() => {
+    setMessages([]);
+    setError("");
+    stickToBottomRef.current = true;
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const handleIncomingMessage = (incomingMessage) => {
+      const message = incomingMessage?.message || incomingMessage;
+      if (!message || message.chatId !== conversationId) return;
+
+      setMessages((prev) => {
+        if (message._id && prev.some((existing) => existing._id === message._id)) {
+          return prev;
+        }
+        return [...prev, message];
+      });
+
+      dispatch(upsertConversationActivity({
+        conversationId,
+        lastMessage: message.text,
+        timeStamp: message.createdAt ? new Date(message.createdAt).toLocaleDateString() : new Date().toLocaleDateString()
+      }));
+      dispatch(markConversationRead(conversationId));
+    };
+
+    socket.on("receive_message", handleIncomingMessage);
+
+    return () => {
+      socket.off("receive_message", handleIncomingMessage);
+    };
+  }, [conversationId, dispatch, socket]);
+
+  useEffect(() => {
+    if (!messageContainerRef.current) return;
+
+    const container = messageContainerRef.current;
+    const scrollToBottom = () => {
+      container.scrollTop = container.scrollHeight;
+    };
+
+    if (messages.length === 0) {
+      requestAnimationFrame(scrollToBottom);
+      return;
+    }
+
+    if (stickToBottomRef.current) {
+      requestAnimationFrame(scrollToBottom);
+    }
+  }, [conversationId, messages]);
+
+  const handleMessageScroll = () => {
+    const container = messageContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < 96;
+  };
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+      _optimisticId: tempId,
+      chatId: conversationId,
+      sender: currentUserId,
+      text: inputText.trim(),
+      createdAt: new Date().toISOString()
+    };
+    const pendingText = inputText.trim();
+    setMessages((prev) => [...prev, optimisticMessage]);
+    dispatch(upsertConversationActivity({
+      conversationId,
+      lastMessage: pendingText,
+      timeStamp: new Date().toLocaleDateString()
+    }));
+    dispatch(markConversationRead(conversationId));
+    setInputText("");
 
     try {
       const newMessage = await requestJson("/api/chat/message", {
         method: "POST",
         baseUrl: API_URL,
         token,
-        body: { chatId: conversationId, text: inputText }
+        body: { chatId: conversationId, text: pendingText }
       });
-      setMessages((prev) => [...prev, newMessage]);
+      setMessages((prev) => prev.map((message) => (
+        message._optimisticId === tempId ? newMessage : message
+      )));
       dispatch(upsertConversationActivity({
         conversationId,
         lastMessage: newMessage.text,
@@ -104,7 +188,7 @@ export default function ChatArea() {
       }));
       dispatch(markConversationRead(conversationId));
       if (!isGroupChat) {
-        socket?.emit("send_message", {
+        emitSocketEvent("send_message", {
           receiverId: directPartnerId,
           chatId: conversationId,
           senderId: currentUserId,
@@ -112,12 +196,13 @@ export default function ChatArea() {
           message: newMessage
         });
       }
-      setInputText("");
     } catch (err) {
+      setMessages((prev) => prev.filter((message) => message._optimisticId !== tempId));
       if (err instanceof ApiError && err.status === 401) {
         logout("/");
         return;
       }
+      setInputText(pendingText);
       setError(err.message || "Failed to send message");
     }
   };
@@ -133,6 +218,14 @@ export default function ChatArea() {
     if (typeof sender === "string") return "User";
     return sender.name || "User";
   };
+
+  const getSenderAvatar = (sender) => {
+    if (!sender || typeof sender === "string") return "";
+    return sender.avatarUrl || "";
+  };
+
+  const selfName = cachedMe?.name || "Me";
+  const selfAvatarUrl = cachedMe?.avatarUrl || "";
 
   const headerName = chatMeta.name || (isGroupChat ? "Group" : "Chat");
   const headerStatus = chatMeta.status || (isGroupChat ? "Group chat" : "Direct chat");
@@ -152,13 +245,25 @@ export default function ChatArea() {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className='message-container'>
+      <div className='message-container' ref={messageContainerRef} onScroll={handleMessageScroll}>
         {messages.length === 0 && <p className="empty-state">No messages yet. Say hi!</p>}
         {messages.map((message) =>
           getSenderId(message.sender) === currentUserId ? (
-            <MessageSelf key={message._id || message.createdAt || message.text} message={message.text} />
+            <MessageSelf
+              key={message._id || message.createdAt || message.text}
+              message={message.text}
+              time={message.createdAt}
+              name={selfName}
+              avatarUrl={selfAvatarUrl}
+            />
           ) : (
-            <Messageothers key={message._id || message.createdAt || message.text} message={message.text} name={getSenderName(message.sender)} />
+            <Messageothers
+              key={message._id || message.createdAt || message.text}
+              message={message.text}
+              name={getSenderName(message.sender)}
+              time={message.createdAt}
+              avatarUrl={getSenderAvatar(message.sender) || headerAvatar}
+            />
           )
         )}
       </div>

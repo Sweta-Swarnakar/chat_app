@@ -20,10 +20,12 @@ export function SessionProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const socketRef = useRef(null);
+  const activeConversationIdRef = useRef(null);
   const [token, setToken] = useState(() => getAuthToken());
   const [ready, setReady] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [socket, setSocket] = useState(null);
 
   const isAuthenticated = isValidAuthToken(token);
   const userId = useMemo(() => getUserIdFromToken(token), [token]);
@@ -45,6 +47,7 @@ export function SessionProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    activeConversationIdRef.current = activeConversationId;
     if (!activeConversationId) return undefined;
     dispatch(markConversationRead(activeConversationId));
     return undefined;
@@ -55,6 +58,7 @@ export function SessionProvider({ children }) {
     if (socket && !token) {
       socket.disconnect();
       socketRef.current = null;
+      setSocket(null);
     }
 
     if (!token || !isValidAuthToken(token) || !userId) {
@@ -68,6 +72,7 @@ export function SessionProvider({ children }) {
     });
 
     socketRef.current = socketClient;
+    setSocket(socketClient);
     setConnectionStatus("connecting");
 
     socketClient.on("connect", () => {
@@ -99,7 +104,7 @@ export function SessionProvider({ children }) {
         timeStamp
       }));
 
-      if (message.chatId === activeConversationId) {
+      if (message.chatId === activeConversationIdRef.current) {
         dispatch(markConversationRead(message.chatId));
         return;
       }
@@ -114,8 +119,9 @@ export function SessionProvider({ children }) {
     return () => {
       socketClient.disconnect();
       socketRef.current = null;
+      setSocket(null);
     };
-  }, [activeConversationId, dispatch, token, userId]);
+  }, [dispatch, token, userId]);
 
   const login = useCallback((accessToken) => {
     if (!accessToken) return;
@@ -130,12 +136,17 @@ export function SessionProvider({ children }) {
     setConnectionStatus("disconnected");
     socketRef.current?.disconnect();
     socketRef.current = null;
+    setSocket(null);
     dispatch(resetUserState());
     dispatch(resetConversationState());
     if (redirectTo) {
       navigate(redirectTo, { replace: true });
     }
   }, [dispatch, navigate]);
+
+  const emitSocketEvent = useCallback((event, payload) => {
+    socketRef.current?.emit(event, payload);
+  }, []);
 
   const value = useMemo(() => ({
     ready,
@@ -144,10 +155,11 @@ export function SessionProvider({ children }) {
     isAuthenticated,
     connectionStatus,
     onlineUsers,
-    socket: socketRef.current,
+    socket,
+    emitSocketEvent,
     login,
     logout
-  }), [connectionStatus, isAuthenticated, login, logout, onlineUsers, ready, token, userId]);
+  }), [connectionStatus, emitSocketEvent, isAuthenticated, login, logout, onlineUsers, ready, socket, token, userId]);
 
   return (
     <SessionContext.Provider value={value}>

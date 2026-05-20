@@ -14,7 +14,7 @@ const sendMessage = async ({ senderId, chatId, text }) => {
     text: trimmedText
   });
 
-  await message.populate("sender", "name email");
+  await message.populate("sender", "name email avatarUrl");
   return message;
 };
 
@@ -28,7 +28,7 @@ const listMessages = async ({ chatId, page, limit }) => {
 
   const [messages, total] = await Promise.all([
     Message.find(query)
-      .populate("sender", "name email")
+      .populate("sender", "name email avatarUrl")
       .sort({ createdAt: 1 })
       .skip(skip)
       .limit(safeLimit),
